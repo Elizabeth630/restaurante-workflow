@@ -25,6 +25,17 @@ if (!$resultado || mysqli_num_rows($resultado) == 0) {
 $fila = mysqli_fetch_array($resultado);
 $pantalla = $fila["pantalla"];
 
+// ========== NUEVA LÓGICA PARA BOTÓN ANTERIOR ==========
+// Determinar si mostrar botón anterior
+$mostrar_boton_anterior = true;
+
+// Excepciones para F1 y F2
+if ($flujo == 'F1' && $proceso == 'P1') {
+    $mostrar_boton_anterior = false; // No se puede retroceder desde P1 en F1
+} else if ($flujo == 'F2' && $proceso == 'P1') {
+    $mostrar_boton_anterior = false; // No se puede retroceder desde P1 en F2
+}
+
 // Incluir archivo de datos de la pantalla
 $bd_pantalla = "bd.".$pantalla.".inc.php";
 if (!file_exists($bd_pantalla)) {
@@ -63,13 +74,15 @@ if (file_exists($pantalla_inc)) {
 }
 ?>
 
-<!-- Botones de navegación -->
+<!-- ========== BOTONES DE NAVEGACIÓN MODIFICADOS ========== -->
 <div style="text-align: center; margin-top: 20px;">
     <form action="controlador.php" method="GET" style="display: inline;">
         <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
         <input type="hidden" name="proceso" value="<?php echo htmlspecialchars($proceso); ?>">
         <input type="hidden" name="ticket" value="<?php echo $ticket; ?>">
-        <input type="submit" value="Anterior" name="Anterior">
+        <?php if ($mostrar_boton_anterior): ?>
+            <input type="submit" value="Anterior" name="Anterior">
+        <?php endif; ?>
     </form>
     
     <form action="controlador.php" method="GET" style="display: inline;">

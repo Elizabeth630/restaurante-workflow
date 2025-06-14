@@ -14,5 +14,16 @@ if (isset($_GET["Siguiente"])) {
     if (!mysqli_stmt_execute($stmt)) {
         die("Error al actualizar pedido: " . mysqli_error($con));
     }
+    
+    // Si estamos retrocediendo, no marcar como completado en flujousuario
+    if (!isset($_GET["Anterior"])) {
+        // Marcar proceso actual como completado
+        $sql_update = "UPDATE flujousuario SET fechafinal = NOW()
+            WHERE ticket = $pedido_id AND flujo = '$flujo' AND proceso = '$proceso' AND fechafinal IS NULL";
+        
+        if (!mysqli_query($con, $sql_update)) {
+            die("Error al actualizar proceso actual: " . mysqli_error($con));
+        }
+    }
 }
 ?>

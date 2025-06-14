@@ -16,29 +16,36 @@ if (isset($_GET["Siguiente"])) {
         $estado_inicial = 'en_preparacion';  // F1 va a preparación primero
     }
     
-    $sql = "INSERT INTO pedidos (mesa_id, items, observaciones, estado, mesero) 
-        VALUES (?, ?, ?, ?, ?)";
-    $stmt = mysqli_prepare($con, $sql);
-    mysqli_stmt_bind_param($stmt, "issss", $mesa_id, $items, $observaciones, $estado_inicial, $_SESSION["usuario"]);
+    // Verificar si ya existe el pedido (para actualizar en lugar de insertar)
+    $check_pedido = mysqli_query($con, "SELECT id FROM pedidos WHERE id = $ticket");
+    
+    if (mysqli_num_rows($check_pedido) > 0) {
+        // Actualizar pedido existente
+        $sql = "UPDATE pedidos SET mesa_id = ?, items = ?, observaciones = ?, estado = ? WHERE id = ?";
+        $stmt = mysqli_prepare($con, $sql);
+        mysqli_stmt_bind_param($stmt, "isssi", $mesa_id, $items, $observaciones, $estado_inicial, $ticket);
+    } else {
+        // Insertar nuevo pedido
+        $sql = "INSERT INTO pedidos (id, mesa_id, items, observaciones, estado, mesero) 
+            VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = mysqli_prepare($con, $sql);
+        mysqli_stmt_bind_param($stmt, "iissss", $ticket, $mesa_id, $items, $observaciones, $estado_inicial, $_SESSION["usuario"]);
+    }
     
     if (!mysqli_stmt_execute($stmt)) {
-        die("Error al crear pedido: " . mysqli_error($con));
+        die("Error al guardar pedido: " . mysqli_error($con));
     }
     
-    // Obtener el ID del pedido creado
-    $pedido_id = mysqli_insert_id($con);
-    
-    // Actualizar el ticket en flujousuario para asociarlo con el pedido
-    $update_sql = "UPDATE flujousuario SET ticket = ? 
-        WHERE ticket = ? AND flujo = ? AND proceso = ? AND fechafinal IS NULL";
-    $stmt_update = mysqli_prepare($con, $update_sql);
-    mysqli_stmt_bind_param($stmt_update, "iiss", $pedido_id, $ticket, $flujo, $proceso);
-    
-    if (!mysqli_stmt_execute($stmt_update)) {
-        error_log("Advertencia: No se pudo actualizar el ticket: " . mysqli_error($con));
+    // Si es un nuevo pedido, actualizar el ticket en flujousuario
+    if (mysqli_num_rows($check_pedido) == 0) {
+        $update_sql = "UPDATE flujousuario SET ticket = ? 
+            WHERE ticket = ? AND flujo = ? AND proceso = ? AND fechafinal IS NULL";
+        $stmt_update = mysqli_prepare($con, $update_sql);
+        mysqli_stmt_bind_param($stmt_update, "iiss", $ticket, $ticket, $flujo, $proceso);
+        
+        if (!mysqli_stmt_execute($stmt_update)) {
+            error_log("Advertencia: No se pudo actualizar el ticket: " . mysqli_error($con));
+        }
     }
-    
-    // Actualizar la variable ticket para el resto del proceso
-    $ticket = $pedido_id;
 }
 ?>
