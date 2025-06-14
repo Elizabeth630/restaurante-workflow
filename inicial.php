@@ -1,4 +1,7 @@
 <?php
+// ==================== ARCHIVO: inicial.php (MODIFICADO) ====================
+?>
+<?php
 // Obtener parámetros de la URL
 $flujo = isset($_GET["flujo"]) ? $_GET["flujo"] : '';
 $proceso = isset($_GET["proceso"]) ? $_GET["proceso"] : '';
@@ -25,15 +28,12 @@ if (!$resultado || mysqli_num_rows($resultado) == 0) {
 $fila = mysqli_fetch_array($resultado);
 $pantalla = $fila["pantalla"];
 
-// ========== NUEVA LÓGICA PARA BOTÓN ANTERIOR ==========
 // Determinar si mostrar botón anterior
 $mostrar_boton_anterior = true;
-
-// Excepciones para F1 y F2
 if ($flujo == 'F1' && $proceso == 'P1') {
-    $mostrar_boton_anterior = false; // No se puede retroceder desde P1 en F1
+    $mostrar_boton_anterior = false;
 } else if ($flujo == 'F2' && $proceso == 'P1') {
-    $mostrar_boton_anterior = false; // No se puede retroceder desde P1 en F2
+    $mostrar_boton_anterior = false;
 }
 
 // Incluir archivo de datos de la pantalla
@@ -43,55 +43,94 @@ if (!file_exists($bd_pantalla)) {
 }
 include $bd_pantalla;
 ?>
+
 <html>
 <head>
-<title>Sistema de Pedidos - <?php echo htmlspecialchars($pantalla); ?></title>
-<style>
-.ticket-info {
-    background-color: #f8f9fa;
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 5px;
-}
-</style>
+    <title>Sistema de Pedidos - <?php echo htmlspecialchars($pantalla); ?></title>
+    <style>
+        .ticket-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .navigation-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .nav-button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+    <script>
+        function prepararFormulario() {
+            // Obtener todos los elementos de input de la pantalla actual
+            var elementos = document.querySelectorAll('input[type="hidden"][id], select[id], input[type="number"][id], textarea[id]');
+            
+            // Crear un formulario temporal
+            var form = document.createElement('form');
+            form.method = 'GET';
+            form.action = 'controlador.php';
+            
+            // Agregar campos básicos
+            form.appendChild(crearCampoOculto('flujo', '<?php echo htmlspecialchars($flujo); ?>'));
+            form.appendChild(crearCampoOculto('proceso', '<?php echo htmlspecialchars($proceso); ?>'));
+            form.appendChild(crearCampoOculto('ticket', '<?php echo $ticket; ?>'));
+            form.appendChild(crearCampoOculto('Siguiente', '1'));
+            
+            // Agregar todos los elementos específicos de la pantalla
+            elementos.forEach(function(elemento) {
+                if (elemento.name && elemento.name !== '') {
+                    form.appendChild(crearCampoOculto(elemento.name, elemento.value));
+                }
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        function crearCampoOculto(name, value) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            return input;
+        }
+    </script>
 </head>
 <body>
-<div class="ticket-info">
-    <strong>Ticket #<?php echo $ticket; ?></strong> |
-    Flujo: <?php echo htmlspecialchars($flujo); ?> |
-    Proceso: <?php echo htmlspecialchars($proceso); ?>
-</div>
-
-<h1><?php echo ucfirst(htmlspecialchars($pantalla)); ?></h1>
-
-<!-- Contenido específico de la pantalla -->
-<?php
-$pantalla_inc = $pantalla.".inc.php";
-if (file_exists($pantalla_inc)) {
-    include $pantalla_inc;
-} else {
-    die("Error: Pantalla no encontrada ($pantalla_inc)");
-}
-?>
-
-<!-- ========== BOTONES DE NAVEGACIÓN MODIFICADOS ========== -->
-<div style="text-align: center; margin-top: 20px;">
-    <form action="controlador.php" method="GET" style="display: inline;">
-        <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
-        <input type="hidden" name="proceso" value="<?php echo htmlspecialchars($proceso); ?>">
-        <input type="hidden" name="ticket" value="<?php echo $ticket; ?>">
-        <?php if ($mostrar_boton_anterior): ?>
-            <input type="submit" value="Anterior" name="Anterior">
-        <?php endif; ?>
-    </form>
+    <div class="ticket-info">
+        <strong>Ticket #<?php echo $ticket; ?></strong> |
+        Flujo: <?php echo htmlspecialchars($flujo); ?> |
+        Proceso: <?php echo htmlspecialchars($proceso); ?>
+    </div>
     
-    <form action="controlador.php" method="GET" style="display: inline;">
-        <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
-        <input type="hidden" name="proceso" value="<?php echo htmlspecialchars($proceso); ?>">
-        <input type="hidden" name="ticket" value="<?php echo $ticket; ?>">
-        <input type="submit" value="Siguiente" name="Siguiente">
-    </form>
-</div>
-
+    <h1><?php echo ucfirst(htmlspecialchars($pantalla)); ?></h1>
+    
+    <!-- Contenido específico de la pantalla -->
+    <?php
+    $pantalla_inc = $pantalla.".inc.php";
+    if (file_exists($pantalla_inc)) {
+        include $pantalla_inc;
+    } else {
+        die("Error: Pantalla no encontrada ($pantalla_inc)");
+    }
+    ?>
+    
+    <!-- Botones de navegación -->
+    <div class="navigation-buttons">
+        <?php if ($mostrar_boton_anterior): ?>
+            <form action="controlador.php" method="GET" style="display: inline;">
+                <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
+                <input type="hidden" name="proceso" value="<?php echo htmlspecialchars($proceso); ?>">
+                <input type="hidden" name="ticket" value="<?php echo $ticket; ?>">
+                <input type="submit" value="Anterior" name="Anterior" class="nav-button">
+            </form>
+        <?php endif; ?>
+        
+        <button type="button" onclick="prepararFormulario()" class="nav-button">Siguiente</button>
+    </div>
 </body>
 </html>
