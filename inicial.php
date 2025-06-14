@@ -1,7 +1,6 @@
 <?php
-// ==================== ARCHIVO: inicial.php (MODIFICADO) ====================
-?>
-<?php
+// ==================== ARCHIVO: inicial.php (MODIFICADO CON CONTROL DE ROLES) ====================
+
 // Obtener parámetros de la URL
 $flujo = isset($_GET["flujo"]) ? $_GET["flujo"] : '';
 $proceso = isset($_GET["proceso"]) ? $_GET["proceso"] : '';
@@ -13,6 +12,12 @@ if (empty($flujo) || empty($proceso) || $ticket <= 0) {
 }
 
 include "conexion.inc.php";
+
+// Verificar sesión y rol del usuario
+if (!isset($_SESSION["usuario"]) || !isset($_SESSION["rol"])) {
+    header("Location: login.php");
+    exit();
+}
 
 // Obtener información del proceso actual
 $query = "SELECT * FROM flujoproceso WHERE flujo=? AND proceso=?";
@@ -27,6 +32,36 @@ if (!$resultado || mysqli_num_rows($resultado) == 0) {
 
 $fila = mysqli_fetch_array($resultado);
 $pantalla = $fila["pantalla"];
+$rol_requerido = $fila["rol"];
+
+// Verificar si el usuario actual tiene el rol necesario para este proceso
+if ($_SESSION["rol"] != $rol_requerido) {
+    die("Error: No tienes permisos para acceder a este proceso. Rol requerido: $rol_requerido");
+}
+
+// Verificar si el proceso anterior está completado (solo para flujo F1)
+if ($flujo == 'F1' && $proceso != 'P1') {
+    // Obtener el proceso anterior
+    $query_anterior = "SELECT proceso FROM flujoproceso WHERE flujo='F1' AND siguiente='$proceso'";
+    $resultado_anterior = mysqli_query($con, $query_anterior);
+    
+    if ($resultado_anterior && mysqli_num_rows($resultado_anterior) > 0) {
+        $fila_anterior = mysqli_fetch_array($resultado_anterior);
+        $proceso_anterior = $fila_anterior["proceso"];
+        
+        // Verificar si el proceso anterior está completado
+        $query_completado = "SELECT * FROM flujousuario 
+                           WHERE ticket = $ticket 
+                           AND flujo = '$flujo' 
+                           AND proceso = '$proceso_anterior' 
+                           AND fechafinal IS NOT NULL";
+        $resultado_completado = mysqli_query($con, $query_completado);
+        
+        if (!$resultado_completado || mysqli_num_rows($resultado_completado) == 0) {
+            die("Error: El proceso anterior ($proceso_anterior) no ha sido completado todavía.");
+        }
+    }
+}
 
 // Determinar si mostrar botón anterior
 $mostrar_boton_anterior = true;
@@ -62,6 +97,17 @@ include $bd_pantalla;
             margin: 0 10px;
             padding: 10px 20px;
             font-size: 16px;
+        }
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        .alert-warning {
+            color: #8a6d3b;
+            background-color: #fcf8e3;
+            border-color: #faebcc;
         }
     </style>
     <script>
@@ -104,7 +150,8 @@ include $bd_pantalla;
     <div class="ticket-info">
         <strong>Ticket #<?php echo $ticket; ?></strong> |
         Flujo: <?php echo htmlspecialchars($flujo); ?> |
-        Proceso: <?php echo htmlspecialchars($proceso); ?>
+        Proceso: <?php echo htmlspecialchars($proceso); ?> |
+        Usuario: <?php echo htmlspecialchars($_SESSION["nombre"]); ?> (<?php echo htmlspecialchars($_SESSION["rol"]); ?>)
     </div>
     
     <h1><?php echo ucfirst(htmlspecialchars($pantalla)); ?></h1>
