@@ -141,3 +141,75 @@ INSERT INTO facturas (pedido_id, total, metodo_pago, fecha) VALUES
 -- Factura para Pedido 4 (completado)
 INSERT INTO facturas (pedido_id, total, metodo_pago, fecha) VALUES
 (4, 35.00, 'efectivo', '2025-06-12 12:45:00');
+
+
+
+-- ==================== MODIFICACIONES SQL PARA FLUJO F3 ====================
+
+-- 1. Crear tabla para manejar condicionales en flujos
+CREATE TABLE flujoProcesoCondicion (
+    flujo VARCHAR(3) NOT NULL,
+    proceso VARCHAR(3) NOT NULL,
+    verdad VARCHAR(3),
+    falso VARCHAR(3),
+    PRIMARY KEY (flujo, proceso)
+);
+
+-- 2. Insertar configuración del nuevo flujo F3 en flujoproceso
+-- Basándome en el patrón típico de un flujo con condicionales para restaurante:
+-- P1: Pedido (mesero) -> P2: Evaluación (mesero) -> 
+-- Si complejo: P3: Preparación especial (cocinero) -> P4: Supervisión (mesero) -> P5: Entrega (mesero)
+-- Si simple: P6: Preparación rápida (mesero) -> P5: Entrega (mesero)
+
+INSERT INTO flujoproceso VALUES ('F3', 'P1', 'P2', 'pedido', 'mesero');
+INSERT INTO flujoproceso VALUES ('F3', 'P2', NULL, 'evaluacion', 'mesero'); -- NULL porque depende de condicional
+INSERT INTO flujoproceso VALUES ('F3', 'P3', 'P4', 'preparacion_especial', 'cocinero');
+INSERT INTO flujoproceso VALUES ('F3', 'P4', 'P5', 'supervision', 'mesero');
+INSERT INTO flujoproceso VALUES ('F3', 'P5', NULL, 'entrega', 'mesero');
+INSERT INTO flujoproceso VALUES ('F3', 'P6', 'P5', 'preparacion_rapida', 'mesero');
+
+-- 3. Insertar condicionales para F3
+-- P2 (evaluación): si verdad (pedido complejo) -> P3, si falso (pedido simple) -> P6
+INSERT INTO flujoProcesoCondicion VALUES('F3', 'P2', 'P3', 'P6');
+
+-- 4. Agregar nueva columna a la tabla pedidos para manejar el tipo de preparación
+ALTER TABLE pedidos ADD COLUMN tipo_preparacion ENUM('simple', 'complejo') DEFAULT 'simple';
+
+-- 5. Insertar datos de ejemplo para F3
+INSERT INTO flujousuario (ticket, usuario, flujo, proceso, fechainicial, fechafinal) 
+VALUES
+-- Ejemplo 1: Pedido complejo (va por cocinero)
+(6, 'mesero1', 'F3', 'P1', '2025-06-14 14:00:00', '2025-06-14 14:05:00'),
+(6, 'mesero1', 'F3', 'P2', '2025-06-14 14:05:00', '2025-06-14 14:10:00'),
+(6, 'cocinero1', 'F3', 'P3', '2025-06-14 14:10:00', '2025-06-14 14:25:00'),
+(6, 'mesero1', 'F3', 'P4', '2025-06-14 14:25:00', '2025-06-14 14:30:00'),
+(6, 'mesero1', 'F3', 'P5', '2025-06-14 14:30:00', NULL);
+
+-- Ejemplo 2: Pedido simple (solo mesero)
+INSERT INTO flujousuario (ticket, usuario, flujo, proceso, fechainicial, fechafinal) 
+VALUES
+(7, 'mesero1', 'F3', 'P1', '2025-06-14 15:00:00', '2025-06-14 15:05:00'),
+(7, 'mesero1', 'F3', 'P2', '2025-06-14 15:05:00', '2025-06-14 15:08:00'),
+(7, 'mesero1', 'F3', 'P6', '2025-06-14 15:08:00', '2025-06-14 15:15:00'),
+(7, 'mesero1', 'F3', 'P5', '2025-06-14 15:15:00', NULL);
+
+-- 6. Insertar pedidos de ejemplo para F3
+INSERT INTO pedidos (id, mesa_id, items, observaciones, estado, mesero, fecha_creacion, tipo_preparacion) 
+VALUES
+(6, 1, 'Paella para 4 personas, Vino tinto', 'Alérgico a mariscos, sin mejillones', 'en_preparacion', 'mesero1', '2025-06-14 14:00:00', 'complejo'),
+(7, 2, 'Sandwich, Papas fritas, Coca Cola', '', 'para_revision', 'mesero1', '2025-06-14 15:00:00', 'simple');
+
+ALTER TABLE pedidos 
+MODIFY COLUMN estado ENUM(
+    'pendiente',
+    'en_preparacion', 
+    'en_preparacion_especial',
+    'en_preparacion_rapida',
+    'en_cocina',
+    'para_supervision',
+    'para_revision',
+    'para_entrega',  -- NUEVO ESTADO AÑADIDO
+    'para_facturar',
+    'completado',
+    'problema'
+) NOT NULL DEFAULT 'pendiente';

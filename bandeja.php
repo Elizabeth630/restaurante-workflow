@@ -9,7 +9,12 @@ $resultado = mysqli_query($con, "select * from flujousuario where usuario='".$_S
             <br>
             <a href="bdsalida.php">Bandeja de salida</a>
             <br>
-            <a href="nuevo_proceso.php">Iniciar Nuevo Proceso</a>
+            <?php if ($_SESSION["rol"] == 'mesero'): ?>
+                <a href="nuevo_proceso.php">Iniciar Nuevo Proceso</a>
+                <br>
+            <?php endif; ?>
+            
+            <a href="login.php">Volver al login</a>
         </div>
         <div style="width:600px; float:left">
             <h2>Procesos Pendientes</h2>

@@ -97,6 +97,7 @@ if (!file_exists($bd_pantalla)) die("Error: Archivo de datos no encontrado ($bd_
 include $bd_pantalla;
 ?>
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -117,7 +118,7 @@ include $bd_pantalla;
         Usuario: <?php echo htmlspecialchars($_SESSION["nombre"]); ?> (<?php echo htmlspecialchars($_SESSION["rol"]); ?>)
     </div>
 
-    <h2><?php echo ucfirst(htmlspecialchars($pantalla)); ?></h2>
+    
 
     <?php 
     // Pantalla visual
@@ -127,6 +128,11 @@ include $bd_pantalla;
     ?>
 
     <div class="navigation-buttons">
+        <!-- Botón Volver a Bandeja -->
+        <a href="bandeja.php" class="nav-button" style="background-color: #6c757d;">
+            Volver a Bandeja
+        </a>
+        
         <?php if ($mostrar_boton_anterior): ?>
             <form action="controlador.php" method="GET" style="display:inline;">
                 <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
@@ -145,34 +151,55 @@ include $bd_pantalla;
     </div>
 
     <script>
-    function prepararFormulario() {
-        const elementos = document.querySelectorAll('input[type="hidden"][id], select[id], input[type="number"][id], textarea[id]');
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = 'controlador.php';
+    // Reemplaza la función prepararFormulario() en inicial.php con esta versión corregida:
 
-        form.appendChild(crearCampoOculto('flujo', '<?php echo htmlspecialchars($flujo); ?>'));
-        form.appendChild(crearCampoOculto('proceso', '<?php echo htmlspecialchars($proceso); ?>'));
-        form.appendChild(crearCampoOculto('ticket', '<?php echo $ticket; ?>'));
-        form.appendChild(crearCampoOculto(document.getElementById('accion_siguiente').value, '1'));
+        function prepararFormulario() {
+            // Buscar elementos por NAME en lugar de solo por ID
+            const elementos = document.querySelectorAll('input[name]:not([name="flujo"]):not([name="proceso"]):not([name="ticket"]), select[name], textarea[name]');
+            const form = document.createElement('form');
+            form.method = 'GET';
+            form.action = 'controlador.php';
 
-        elementos.forEach(el => {
-            if (el.name && el.name !== '') {
-                form.appendChild(crearCampoOculto(el.name, el.value));
+            // Campos base obligatorios
+            form.appendChild(crearCampoOculto('flujo', '<?php echo htmlspecialchars($flujo); ?>'));
+            form.appendChild(crearCampoOculto('proceso', '<?php echo htmlspecialchars($proceso); ?>'));
+            form.appendChild(crearCampoOculto('ticket', '<?php echo $ticket; ?>'));
+            form.appendChild(crearCampoOculto(document.getElementById('accion_siguiente').value, '1'));
+
+            // Añadir todos los demás elementos del formulario
+            elementos.forEach(el => {
+                if (el.name && el.name !== '') {
+                    let valor = el.value;
+                    
+                    // Manejar casos especiales
+                    if (el.type === 'radio' && !el.checked) {
+                        return; // Saltar radios no seleccionados
+                    } else if (el.type === 'checkbox' && !el.checked) {
+                        return; // Saltar checkboxes no seleccionados
+                    }
+                    
+                    form.appendChild(crearCampoOculto(el.name, valor));
+                }
+            });
+
+            // Debug: mostrar qué se está enviando
+            console.log('Enviando formulario con campos:');
+            const formData = new FormData(form);
+            for (let [key, value] of formData.entries()) {
+                console.log(key + ': ' + value);
             }
-        });
 
-        document.body.appendChild(form);
-        form.submit();
-    }
+            document.body.appendChild(form);
+            form.submit();
+        }
 
-    function crearCampoOculto(name, value) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        return input;
-    }
+        function crearCampoOculto(name, value) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            return input;
+        }
     </script>
 </body>
 </html>

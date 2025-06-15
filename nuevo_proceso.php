@@ -1,5 +1,17 @@
 <?php
 include "conexion.inc.php";
+
+// Verificar sesión y rol
+if (!isset($_SESSION["usuario"])) {
+    header("Location: login.php");
+    exit();
+}
+
+if ($_SESSION["rol"] != 'mesero') {
+    $_SESSION["error"] = "Solo los meseros pueden iniciar nuevos procesos";
+    header("Location: bandeja.php");
+    exit();
+}
 ?>
 <html>
     <head>
@@ -32,6 +44,13 @@ include "conexion.inc.php";
                 <h2>Proceso Rápido (F2)</h2>
                 <p>Pedido → Cocina → Factura</p>
                 <input type="radio" name="flujo" value="F2">
+                <label>Seleccionar</label>
+            </div>
+            
+            <div class="flujo-option">
+                <h2>Proceso con Evaluación (F3)</h2>
+                <p>Pedido → Evaluación → [Preparación Especial → Supervisión] o [Preparación Rápida] → Entrega</p>
+                <input type="radio" name="flujo" value="F3">
                 <label>Seleccionar</label>
             </div>
             
