@@ -54,21 +54,21 @@ if ($pedido_actual):
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Actualizar texto del botón según selección
-    const radios = document.querySelectorAll('input[name="decision"]');
-    const botonSiguiente = document.querySelector('.nav-button:last-child');
+// document.addEventListener('DOMContentLoaded', function() {
+//     // Actualizar texto del botón según selección
+//     const radios = document.querySelectorAll('input[name="decision"]');
+//     const botonSiguiente = document.querySelector('.nav-button:last-child');
     
-    radios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (botonSiguiente) {
-                botonSiguiente.textContent = this.value === 'verdad' 
-                    ? 'Enviar a Cocina (Preparación Especial)'
-                    : 'Preparar Yo (Pedido Simple)';
-            }
-        });
-    });
-});
+//     radios.forEach(radio => {
+//         radio.addEventListener('change', function() {
+//             if (botonSiguiente) {
+//                 botonSiguiente.textContent = this.value === 'verdad' 
+//                     ? 'Enviar a Cocina (Preparación Especial)'
+//                     : 'Preparar Yo (Pedido Simple)';
+//             }
+//         });
+//     });
+// });
 
 // Override de la función prepararFormulario para este formulario específico
 function prepararFormulario() {

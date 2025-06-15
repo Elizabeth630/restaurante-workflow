@@ -1,41 +1,63 @@
 <?php
-include "conexion.inc.php";
+Include "conexion.inc.php";
 $resultado = mysqli_query($con, "select * from flujousuario where usuario='".$_SESSION["usuario"]."' and fechafinal is null");
 ?>
 <html>
+    <head>
+        <title>Bandeja de Entrada</title>
+        <link rel="stylesheet" href="estilos.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    </head>
     <body>
-        <div style="width:200px; float:left">
-            <a href="">Bandeja de entrada</a>
-            <br>
-            <a href="bdsalida.php">Bandeja de salida</a>
-            <br>
-            <?php if ($_SESSION["rol"] == 'mesero'): ?>
-                <a href="nuevo_proceso.php">Iniciar Nuevo Proceso</a>
-                <br>
-            <?php endif; ?>
-            
-            <a href="login.php">Volver al login</a>
-        </div>
-        <div style="width:600px; float:left">
-            <h2>Procesos Pendientes</h2>
-            <table border="1">
-                <tr>
-                    <th>Flujo</th>
-                    <th>Proceso</th>
-                    <th>Fecha Inicio</th>
-                    <th>Operación</th>
-                </tr>
-                <?php
-                while ($fila = mysqli_fetch_array($resultado)) {
-                    echo "<tr>";
-                    echo "<td>".$fila["flujo"]."</td>";
-                    echo "<td>".$fila["proceso"]."</td>";
-                    echo "<td>".$fila["fechainicial"]."</td>";
-                    echo "<td><a href='inicial.php?flujo=".$fila["flujo"]."&proceso=".$fila["proceso"]."&ticket=".$fila["ticket"]."'>Atender</a></td>";
-                    echo "</tr>";
-                }
-                ?>
-            </table>
+        <header class="navbar">
+            <a href="bandeja.php" class="navbar-brand">
+                <i class="fas fa-utensils"></i> Workflow-Restaurante
+            </a>
+            <div class="navbar-actions">
+                <a href="login.php" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+                </a>
+            </div>
+        </header>
+        
+        <div class="container">
+            <div class="bandeja-container">
+                <div class="bandeja-menu">
+                    <a href="bandeja.php" class="active">Bandeja de entrada</a>
+                    <a href="bdsalida.php">Bandeja de salida</a>
+                    <?php if ($_SESSION["rol"] == 'mesero'): ?>
+                        <a href="nuevo_proceso.php">Iniciar Nuevo Proceso</a>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="bandeja-content">
+                    <h2>Procesos Pendientes</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Flujo</th>
+                                <th>Proceso</th>
+                                <th>Fecha Inicio</th>
+                                <th>Operación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($fila = mysqli_fetch_array($resultado)): ?>
+                                <tr>
+                                    <td><?php echo $fila["flujo"]; ?></td>
+                                    <td><?php echo $fila["proceso"]; ?></td>
+                                    <td><?php echo $fila["fechainicial"]; ?></td>
+                                    <td>
+                                        <a href="inicial.php?flujo=<?php echo $fila["flujo"]; ?>&proceso=<?php echo $fila["proceso"]; ?>&ticket=<?php echo $fila["ticket"]; ?>" class="btn btn-secondary">
+                                            Atender
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </body>
 </html>

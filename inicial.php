@@ -38,6 +38,14 @@ $rol_requerido = $fila["rol"];
 $rol_siguiente = $fila["rol_siguiente"];
 $proceso_siguiente = $fila["proceso_siguiente"];
 
+// Cargar lógica de datos (esto debe ir ANTES de usarse)
+$bd_pantalla = "bd.$pantalla.inc.php";
+if (!file_exists($bd_pantalla)) die("Error: Archivo de datos no encontrado ($bd_pantalla)");
+include $bd_pantalla;
+
+// Definir pantalla_inc aquí, después de cargar bd_pantalla
+$pantalla_inc = "$pantalla.inc.php";
+
 // Validar rol
 if ($_SESSION["rol"] !== $rol_requerido) {
     echo "<div class='alert alert-info'>
@@ -90,116 +98,123 @@ if ($proceso_siguiente && $rol_siguiente) {
               </div>";
     }
 }
-
-// Cargar lógica de datos
-$bd_pantalla = "bd.$pantalla.inc.php";
-if (!file_exists($bd_pantalla)) die("Error: Archivo de datos no encontrado ($bd_pantalla)");
-include $bd_pantalla;
 ?>
-
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Proceso: <?php echo htmlspecialchars($pantalla); ?></title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        .ticket-info { background: #f0f0f0; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
-        .navigation-buttons { text-align: center; margin-top: 20px; }
-        .nav-button { margin: 0 10px; padding: 10px 20px; font-size: 16px; }
-        .alert { border: 1px solid #ccc; padding: 15px; margin: 15px 0; background: #fefefe; border-radius: 5px; }
+        .ticket-info { 
+            background: var(--accent-color); 
+            padding: 15px;
+            margin-bottom: 20px; 
+            border-radius: 8px;
+            color: var(--dark-color);
+            font-weight: 600;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 <body>
-    <div class="ticket-info">
-        <strong>Ticket:</strong> #<?php echo $ticket; ?> |
-        Flujo: <?php echo htmlspecialchars($flujo); ?> |
-        Proceso: <?php echo htmlspecialchars($proceso); ?> |
-        Usuario: <?php echo htmlspecialchars($_SESSION["nombre"]); ?> (<?php echo htmlspecialchars($_SESSION["rol"]); ?>)
-    </div>
-
-    
-
-    <?php 
-    // Pantalla visual
-    $pantalla_inc = "$pantalla.inc.php";
-    if (file_exists($pantalla_inc)) include $pantalla_inc;
-    else die("Error: Pantalla no encontrada ($pantalla_inc)");
-    ?>
-
-    <div class="navigation-buttons">
-        <!-- Botón Volver a Bandeja -->
-        <a href="bandeja.php" class="nav-button" style="background-color: #6c757d;">
-            Volver a Bandeja
+    <header class="navbar">
+        <a href="bandeja.php" class="navbar-brand">
+            <i class="fas fa-utensils"></i> Workflow-Restaurante
         </a>
-        
-        <?php if ($mostrar_boton_anterior): ?>
+        <div class="navbar-actions">
+            <a href="login.php" class="btn btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+            </a>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="ticket-info">
+            <span><strong>Ticket:</strong> #<?php echo $ticket; ?></span>
+            <span><strong>Flujo:</strong> <?php echo htmlspecialchars($flujo); ?></span>
+            <span><strong>Proceso:</strong> <?php echo htmlspecialchars($proceso); ?></span>
+            <span><strong>Usuario:</strong> <?php echo htmlspecialchars($_SESSION["nombre"]); ?></span>
+        </div>
+
+        <?php 
+        if (file_exists($pantalla_inc)) {
+            include $pantalla_inc;
+        } else {
+            echo "<div class='alert alert-danger'>
+                    <i class='fas fa-exclamation-triangle'></i> Pantalla no encontrada: $pantalla_inc
+                  </div>";
+        }
+        ?>
+
+        <div class="navigation-buttons">
+            <!-- Botón Volver a Bandeja -->
+            <a href="bandeja.php" class="nav-button" style="background-color: var(--light-color); color: white;">
+                Volver a Bandeja
+            </a>
+
+            <?php if ($mostrar_boton_anterior): ?>
             <form action="controlador.php" method="GET" style="display:inline;">
                 <input type="hidden" name="flujo" value="<?php echo htmlspecialchars($flujo); ?>">
                 <input type="hidden" name="proceso" value="<?php echo htmlspecialchars($proceso); ?>">
                 <input type="hidden" name="ticket" value="<?php echo $ticket; ?>">
-                <input type="submit" name="Anterior" value="Anterior" class="nav-button">
+                <button type="submit" name="Anterior" class="nav-button" style="background-color: var(--warning-color); color: white;">
+                    Anterior
+                </button>
             </form>
-        <?php endif; ?>
-
-        <?php if ($mostrar_boton_siguiente): ?>
-            <button type="button" onclick="prepararFormulario()" class="nav-button">
+            <?php endif; ?>
+            
+            <?php if ($mostrar_boton_siguiente): ?>
+            <button type="button" onclick="prepararFormulario()" class="nav-button" style="background-color: var(--success-color); color: white;">
                 <?php echo $texto_boton_siguiente; ?>
             </button>
             <input type="hidden" id="accion_siguiente" value="<?php echo $accion_siguiente; ?>">
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
     </div>
 
     <script>
-    // Reemplaza la función prepararFormulario() en inicial.php con esta versión corregida:
+    function prepararFormulario() {
+        // Buscar elementos por NAME en lugar de solo por ID
+        const elementos = document.querySelectorAll('input[name]:not([name="flujo"]):not([name="proceso"]):not([name="ticket"]), select[name], textarea[name]');
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = 'controlador.php';
 
-        function prepararFormulario() {
-            // Buscar elementos por NAME en lugar de solo por ID
-            const elementos = document.querySelectorAll('input[name]:not([name="flujo"]):not([name="proceso"]):not([name="ticket"]), select[name], textarea[name]');
-            const form = document.createElement('form');
-            form.method = 'GET';
-            form.action = 'controlador.php';
+        // Campos base obligatorios
+        form.appendChild(crearCampoOculto('flujo', '<?php echo htmlspecialchars($flujo); ?>'));
+        form.appendChild(crearCampoOculto('proceso', '<?php echo htmlspecialchars($proceso); ?>'));
+        form.appendChild(crearCampoOculto('ticket', '<?php echo $ticket; ?>'));
+        form.appendChild(crearCampoOculto(document.getElementById('accion_siguiente').value, '1'));
 
-            // Campos base obligatorios
-            form.appendChild(crearCampoOculto('flujo', '<?php echo htmlspecialchars($flujo); ?>'));
-            form.appendChild(crearCampoOculto('proceso', '<?php echo htmlspecialchars($proceso); ?>'));
-            form.appendChild(crearCampoOculto('ticket', '<?php echo $ticket; ?>'));
-            form.appendChild(crearCampoOculto(document.getElementById('accion_siguiente').value, '1'));
-
-            // Añadir todos los demás elementos del formulario
-            elementos.forEach(el => {
-                if (el.name && el.name !== '') {
-                    let valor = el.value;
-                    
-                    // Manejar casos especiales
-                    if (el.type === 'radio' && !el.checked) {
-                        return; // Saltar radios no seleccionados
-                    } else if (el.type === 'checkbox' && !el.checked) {
-                        return; // Saltar checkboxes no seleccionados
-                    }
-                    
-                    form.appendChild(crearCampoOculto(el.name, valor));
-                }
-            });
-
-            // Debug: mostrar qué se está enviando
-            console.log('Enviando formulario con campos:');
-            const formData = new FormData(form);
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ': ' + value);
+        // Añadir todos los demás elementos del formulario
+        elementos.forEach(el => {
+            if (el.name && el.name !== '') {
+                let valor = el.value;
+                
+                if (el.type === 'radio' && !el.checked) return;
+                if (el.type === 'checkbox' && !el.checked) return;
+                
+                form.appendChild(crearCampoOculto(el.name, valor));
             }
+        });
 
-            document.body.appendChild(form);
-            form.submit();
-        }
+        document.body.appendChild(form);
+        form.submit();
+    }
 
-        function crearCampoOculto(name, value) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = name;
-            input.value = value;
-            return input;
-        }
+    function crearCampoOculto(name, value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        return input;
+    }
     </script>
 </body>
 </html>
