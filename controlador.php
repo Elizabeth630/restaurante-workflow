@@ -1,5 +1,5 @@
 <?php
-// ==================== ARCHIVO: controlador.php (MODIFICADO PARA F3) ====================
+// ==================== ARCHIVO: controlador.php (VERSIÓN GENÉRICA) ====================
 
 // Verificar si la sesión no está activa antes de iniciarla
 if (session_status() === PHP_SESSION_NONE) {
@@ -78,17 +78,8 @@ if (isset($_GET["Siguiente"]) || isset($_GET["Transferir"])) {
         error_log("Proceso condicional: flujo=$flujo, proceso=$proceso, decisión=$decision, siguiente=$siguiente_proceso");
         
     } else {
-        // Lógica normal para procesos sin condicionales
-        if ($flujo == 'F2') {
-            switch ($proceso) {
-                case 'P1': $siguiente_proceso = 'P2'; break;
-                case 'P2': $siguiente_proceso = 'P3'; break;
-                case 'P3': $siguiente_proceso = null; break;
-                default: $siguiente_proceso = null;
-            }
-        } else {
-            $siguiente_proceso = $fila_proceso["siguiente"];
-        }
+        // Lógica genérica para cualquier flujo
+        $siguiente_proceso = $fila_proceso["siguiente"];
     }
     
     // Si no hay siguiente proceso - completar
@@ -97,8 +88,15 @@ if (isset($_GET["Siguiente"]) || isset($_GET["Transferir"])) {
                            WHERE ticket = $ticket AND flujo = '$flujo' 
                            AND proceso = '$proceso' AND fechafinal IS NULL");
         
-        if (($flujo == 'F1' && $proceso == 'P5') || 
-            ($flujo == 'F3' && ($proceso == 'P5' || $proceso == 'P6'))) {
+        // Marcar pedido como completado si el proceso actual es el último del flujo
+        $es_proceso_final = true;
+        $query_check_final = "SELECT 1 FROM flujoproceso WHERE flujo='$flujo' AND siguiente='$proceso'";
+        $result_check_final = mysqli_query($con, $query_check_final);
+        if ($result_check_final && mysqli_num_rows($result_check_final) > 0) {
+            $es_proceso_final = false;
+        }
+        
+        if ($es_proceso_final) {
             mysqli_query($con, "UPDATE pedidos SET estado='completado' WHERE id=$ticket");
         }
         
@@ -143,7 +141,7 @@ if (isset($_GET["Siguiente"]) || isset($_GET["Transferir"])) {
     }
     
     // Insertar siguiente proceso
-    if (($flujo == 'F1' || $flujo == 'F3') && $rol_siguiente != $_SESSION["rol"]) {
+    if ($rol_siguiente != $_SESSION["rol"]) {
         $query_usuario = "SELECT username FROM usuarios WHERE rol='$rol_siguiente' LIMIT 1";
         $resultado_usuario = mysqli_query($con, $query_usuario);
         
@@ -177,49 +175,41 @@ if (isset($_GET["Siguiente"]) || isset($_GET["Transferir"])) {
     exit();
     
 } else if (isset($_GET["Anterior"])) {
-    // --- LÓGICA PARA EL BOTÓN ANTERIOR (SIN CAMBIOS MAYORES) ---
-    // En controlador.php, actualiza la función encontrarProcesoAnterior()
-function encontrarProcesoAnterior($flujo, $proceso_actual, $con) {
-    if ($flujo == 'F2') {
-        switch ($proceso_actual) {
-            case 'P2': return 'P1';
-            case 'P3': return 'P2';
-            default: return null;
+    // --- LÓGICA PARA EL BOTÓN ANTERIOR (VERSIÓN GENÉRICA) ---
+    function encontrarProcesoAnterior($flujo, $proceso_actual, $con, $ticket) {
+        // Primero verificar si hay un condicional que apunte a este proceso
+        $query_condicional = "SELECT proceso FROM flujoProcesoCondicion 
+                             WHERE flujo='$flujo' AND (verdad='$proceso_actual' OR falso='$proceso_actual')";
+        $result_condicional = mysqli_query($con, $query_condicional);
+        
+        if ($result_condicional && mysqli_num_rows($result_condicional) > 0) {
+            return mysqli_fetch_assoc($result_condicional)['proceso'];
         }
-    } else if ($flujo == 'F3') {
-        // Nueva lógica para F3
-        switch ($proceso_actual) {
-            case 'P2': return 'P1';
-            case 'P3': return 'P2'; // Desde preparación especial vuelve a evaluación
-            case 'P4': return 'P3'; // Desde supervisión vuelve a preparación especial
-            case 'P5': return 'P4'; // Desde entrega vuelve a supervisión
-            case 'P6': 
-                // Para facturación, debemos verificar de dónde venimos
-                $query = "SELECT proceso FROM flujousuario 
-                          WHERE flujo='F3' AND ticket=$ticket 
-                          AND proceso IN ('P2','P5') 
-                          ORDER BY fechainicial DESC LIMIT 1";
-                $result = mysqli_query($con, $query);
-                if ($result && mysqli_num_rows($result) > 0) {
-                    return mysqli_fetch_assoc($result)['proceso'];
-                }
-                return 'P5'; // Por defecto, volver a entrega
-            default: return null;
-        }
-    } else {
-        // Lógica original para F1
+        
+        // Si no es un destino condicional, buscar el proceso anterior normal
         $query = "SELECT proceso FROM flujoproceso 
                   WHERE flujo='$flujo' AND siguiente='$proceso_actual'";
         $resultado = mysqli_query($con, $query);
+        
         if ($resultado && mysqli_num_rows($resultado) > 0) {
-            $fila = mysqli_fetch_array($resultado);
-            return $fila["proceso"];
+            return mysqli_fetch_assoc($resultado)['proceso'];
         }
+        
+        // Si no encontramos un proceso anterior definido, buscar en el historial
+        $query_historial = "SELECT proceso FROM flujousuario 
+                           WHERE flujo='$flujo' AND ticket=$ticket 
+                           AND proceso != '$proceso_actual'
+                           ORDER BY fechainicial DESC LIMIT 1";
+        $result_historial = mysqli_query($con, $query_historial);
+        
+        if ($result_historial && mysqli_num_rows($result_historial) > 0) {
+            return mysqli_fetch_assoc($result_historial)['proceso'];
+        }
+        
         return null;
     }
-}
     
-    $proceso_anterior = encontrarProcesoAnterior($flujo, $proceso, $con);
+    $proceso_anterior = encontrarProcesoAnterior($flujo, $proceso, $con, $ticket);
     
     if ($proceso_anterior) {
         $check_anterior = mysqli_query($con, "SELECT * FROM flujousuario 
@@ -235,13 +225,31 @@ function encontrarProcesoAnterior($flujo, $proceso_actual, $con) {
             mysqli_query($con, "UPDATE flujousuario SET fechafinal = NULL 
                                WHERE ticket = $ticket AND flujo = '$flujo' AND proceso = '$proceso_anterior'");
             
-            // Actualizar el estado del pedido según el proceso anterior
-            switch ($proceso_anterior) {
-                case 'P1': mysqli_query($con, "UPDATE pedidos SET estado='pendiente' WHERE id=$ticket"); break;
-                case 'P2': mysqli_query($con, "UPDATE pedidos SET estado='en_preparacion' WHERE id=$ticket"); break;
-                case 'P3': mysqli_query($con, "UPDATE pedidos SET estado='en_cocina' WHERE id=$ticket"); break;
-                case 'P4': mysqli_query($con, "UPDATE pedidos SET estado='para_revision' WHERE id=$ticket"); break;
-                case 'P5': mysqli_query($con, "UPDATE pedidos SET estado='para_facturar' WHERE id=$ticket"); break;
+            // Actualizar el estado del pedido según el proceso anterior (si aplica)
+            $query_estado_anterior = "SELECT pantalla FROM flujoproceso 
+                                    WHERE flujo='$flujo' AND proceso='$proceso_anterior'";
+            $result_estado = mysqli_query($con, $query_estado_anterior);
+            
+            if ($result_estado && mysqli_num_rows($result_estado) > 0) {
+                $pantalla_anterior = mysqli_fetch_assoc($result_estado)['pantalla'];
+                
+                // Mapeo genérico de pantallas a estados
+                $estados = [
+                    'pedido' => 'pendiente',
+                    'preparacion' => 'en_preparacion',
+                    'cocina' => 'en_cocina',
+                    'revision' => 'para_revision',
+                    'factura' => 'para_facturar',
+                    'evaluacion' => 'pendiente',
+                    'preparacion_especial' => 'en_preparacion_especial',
+                    'preparacion_rapida' => 'en_preparacion_rapida',
+                    'supervision' => 'para_supervision',
+                    'entrega' => 'para_entrega'
+                ];
+                
+                if (isset($estados[$pantalla_anterior])) {
+                    mysqli_query($con, "UPDATE pedidos SET estado='".$estados[$pantalla_anterior]."' WHERE id=$ticket");
+                }
             }
             
             header("Location: inicial.php?flujo=$flujo&proceso=$proceso_anterior&ticket=$ticket");

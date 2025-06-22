@@ -1,5 +1,5 @@
 <?php
-// ==================== ARCHIVO: pedido.inc.php (MODIFICADO) ====================
+// ==================== ARCHIVO: pedido.inc.php (ESTRUCTURA BD CORRECTA) ====================
 ?>
 <h2>Nuevo Pedido</h2>
 <?php
@@ -13,6 +13,11 @@ if ($ticket > 0) {
     }
 }
 ?>
+
+<!-- Mantener contexto del flujo actual de forma dinámica -->
+<input type="hidden" name="flujo_context" value="<?php echo htmlspecialchars($flujo ?? ''); ?>">
+<input type="hidden" name="proceso_context" value="<?php echo htmlspecialchars($proceso ?? ''); ?>">
+<input type="hidden" name="ticket_context" value="<?php echo (int)($ticket ?? 0); ?>">
 
 <table border="1">
 <tr>
@@ -45,3 +50,10 @@ if ($ticket > 0) {
 </tr>
 </table>
 
+<?php
+$resultado = mysqli_query($con, "SELECT * FROM pedidos WHERE estado='pendiente' AND mesero='".$_SESSION["usuario"]."'");
+$pedidos = [];
+while ($fila = mysqli_fetch_array($resultado)) {
+    $pedidos[] = $fila;
+}
+?>

@@ -296,3 +296,34 @@ table select {
     padding: 8px;
     margin: 0;
 }
+
+/* Estilos para admin flujos */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-danger {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c1121f;
+}
+
+/* Mejoras para tablas */
+table td:last-child {
+    white-space: nowrap;
+}

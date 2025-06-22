@@ -4,21 +4,27 @@ $resultado = mysqli_query($con, "select * from flujousuario where usuario='".$_S
 ?>
 <html>
     <head>
-        <title>Bandeja de Entrada</title>
-        <link rel="stylesheet" href="estilos.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <title>Bandeja de Entrada</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     </head>
     <body>
-        <header class="navbar">
-            <a href="bandeja.php" class="navbar-brand">
-                <i class="fas fa-utensils"></i> Workflow-Restaurante
-            </a>
-            <div class="navbar-actions">
-                <a href="login.php" class="btn btn-logout">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+    <header class="navbar">
+        <a href="bandeja.php" class="navbar-brand">
+        <i class="fas fa-utensils"></i> Workflow-Restaurante
+        </a>
+        <div class="navbar-actions">
+            <?php if ($_SESSION["rol"] == 'mesero'): ?>
+                <a href="admin_flujos.php" class="btn btn-secondary">
+                    <i class="fas fa-cog"></i> Administrar Flujos
                 </a>
-            </div>
-        </header>
+            <?php endif; ?>
+            <a href="login.php" class="btn btn-logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+            </a>
+        </div>
+    </header>
+    <!-- Resto del código existente... -->
         
         <div class="container">
             <div class="bandeja-container">

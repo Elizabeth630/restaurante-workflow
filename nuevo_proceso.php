@@ -12,6 +12,47 @@ if ($_SESSION["rol"] != 'mesero') {
     header("Location: bandeja.php");
     exit();
 }
+
+// Obtener todos los flujos disponibles de la base de datos
+$query_flujos = "SELECT DISTINCT flujo FROM flujoproceso ORDER BY flujo";
+$result_flujos = mysqli_query($con, $query_flujos);
+$flujos_disponibles = [];
+
+if ($result_flujos && mysqli_num_rows($result_flujos) > 0) {
+    while ($row = mysqli_fetch_assoc($result_flujos)) {
+        $flujos_disponibles[] = $row['flujo'];
+    }
+}
+
+// Descripciones e iconos para los flujos (pueden moverse a la BD si se desea)
+$descripciones_flujos = [
+    'F1' => [
+        'nombre' => 'Proceso Normal',
+        'icono' => 'fas fa-list-ol',
+        'descripcion' => 'Pedido → Preparación → Cocina → Revisión → Factura'
+    ],
+    'F2' => [
+        'nombre' => 'Proceso Rápido',
+        'icono' => 'fas fa-bolt',
+        'descripcion' => 'Pedido → Cocina → Factura'
+    ],
+    'F3' => [
+        'nombre' => 'Proceso con Evaluación',
+        'icono' => 'fas fa-clipboard-check',
+        'descripcion' => 'Pedido → Evaluación → [Preparación Especial → Supervisión] o [Preparación Rápida] → Entrega'
+    ]
+];
+
+// Para flujos no definidos, usar valores por defecto
+foreach ($flujos_disponibles as $flujo) {
+    if (!isset($descripciones_flujos[$flujo])) {
+        $descripciones_flujos[$flujo] = [
+            'nombre' => "Flujo $flujo",
+            'icono' => 'fas fa-random',
+            'descripcion' => 'Proceso personalizado'
+        ];
+    }
+}
 ?>
 <html>
     <head>
@@ -129,6 +170,14 @@ if ($_SESSION["rol"] != 'mesero') {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
             }
+            
+            .no-flujos {
+                text-align: center;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+                color: #6c757d;
+            }
         </style>
     </head>
     <body>
@@ -148,30 +197,34 @@ if ($_SESSION["rol"] != 'mesero') {
                 <h1 class="process-title">Seleccione el Tipo de Proceso</h1>
                 
                 <form action="iniciar_proceso.php" method="post" class="flujo-options">
-                    <div class="flujo-option">
-                        <input type="radio" name="flujo" value="F1" id="flujo-f1" checked>
-                        <h2><i class="fas fa-list-ol"></i> Proceso Normal (F1)</h2>
-                        <p>Pedido → Preparación → Cocina → Revisión → Factura</p>
-                        <label for="flujo-f1">Seleccionar</label>
-                    </div>
-                    
-                    <div class="flujo-option">
-                        <input type="radio" name="flujo" value="F2" id="flujo-f2">
-                        <h2><i class="fas fa-bolt"></i> Proceso Rápido (F2)</h2>
-                        <p>Pedido → Cocina → Factura</p>
-                        <label for="flujo-f2">Seleccionar</label>
-                    </div>
-                    
-                    <div class="flujo-option">
-                        <input type="radio" name="flujo" value="F3" id="flujo-f3">
-                        <h2><i class="fas fa-clipboard-check"></i> Proceso con Evaluación (F3)</h2>
-                        <p>Pedido → Evaluación → [Preparación Especial → Supervisión] o [Preparación Rápida] → Entrega</p>
-                        <label for="flujo-f3">Seleccionar</label>
-                    </div>
-                    
-                    <button type="submit" class="submit-btn">
-                        <i class="fas fa-play-circle"></i> Iniciar Proceso
-                    </button>
+                    <?php if (!empty($flujos_disponibles)): ?>
+                        <?php foreach ($flujos_disponibles as $index => $flujo): ?>
+                            <div class="flujo-option">
+                                <input type="radio" name="flujo" value="<?php echo $flujo; ?>" 
+                                       id="flujo-<?php echo strtolower($flujo); ?>" 
+                                       <?php echo $index === 0 ? 'checked' : ''; ?>>
+                                <h2>
+                                    <i class="<?php echo $descripciones_flujos[$flujo]['icono']; ?>"></i> 
+                                    <?php echo $descripciones_flujos[$flujo]['nombre']; ?> (<?php echo $flujo; ?>)
+                                </h2>
+                                <p><?php echo $descripciones_flujos[$flujo]['descripcion']; ?></p>
+                                <label for="flujo-<?php echo strtolower($flujo); ?>">Seleccionar</label>
+                            </div>
+                        <?php endforeach; ?>
+                        
+                        <button type="submit" class="submit-btn">
+                            <i class="fas fa-play-circle"></i> Iniciar Proceso
+                        </button>
+                    <?php else: ?>
+                        <div class="no-flujos">
+                            <i class="fas fa-exclamation-circle" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                            <h3>No hay flujos disponibles</h3>
+                            <p>No se han configurado flujos de trabajo en el sistema.</p>
+                            <a href="bandeja.php" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Volver a la bandeja
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </form>
             </div>
         </div>
